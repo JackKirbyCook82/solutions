@@ -29,18 +29,20 @@ class LocalizingCalculators:
         arguments = [self.options, spreads]
         parameters = dict(method=self.method, smoothing=self.smoothing, weights=self.weights)
         localized = self.proximity(*arguments)
-        surface = self.surface(localized, **parameters)
-        localized = self.standardization(localized, surface)
-        return localized
+
+#        surface = self.surface(localized, **parameters)
+#        localized = self.standardization(localized, surface)
+#        return localized
 
     def __iter__(self):
         arguments = [self.options]
         parameters = dict(method=self.method, smoothing=self.smoothing, weights=self.weights)
         generator = self.partitions(*arguments)
-        for localized in generator:
-            surface = self.surface(localized, **parameters)
-            localized = self.standardization(localized, surface)
-            yield localized
+
+#        for localized in generator:
+#            surface = self.surface(localized, **parameters)
+#            localized = self.standardization(localized, surface)
+#            yield localized
 
 
 class LocalizingComputation(object):
