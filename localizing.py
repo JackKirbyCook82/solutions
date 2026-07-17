@@ -19,6 +19,8 @@ __copyright__ = "Copyright 2026, Jack Kirby Cook"
 __license__ = "MIT License"
 
 
+# REORGANIZE THIS MODULE
+
 @dataclass(frozen=True)
 class LocalizingCalculators:
     options: pd.DataFrame; surface: Callable; partitions: Callable; proximity: Callable; standardization: Optional[Callable]
