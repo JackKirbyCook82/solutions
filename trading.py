@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tues Jul 14 2026
-@name:   Finance Solutions
+@name:   Trading Solutions
 @author: Jack Kirby Cook
 
 """
 
 import pandas as pd
+
 from support.custom import NumRange
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
-__all__ = ["OptionDownloader", "OptionFiltering", "OptionComputation"]
+__all__ = ["OptionDownloading", "OptionFiltering", "OptionCalculating"]
 __copyright__ = "Copyright 2026, Jack Kirby Cook"
 __license__ = "MIT License"
 
 
-class OptionDownloader(object):
+class OptionDownloading(object):
     def __init__(self, *args, stocks, contracts, options, **kwargs):
         super().__init__(*args, **kwargs)
         self.__contracts = contracts
@@ -60,11 +61,12 @@ class OptionFiltering(object):
     def sanity(self): return self.__sanity
 
 
-class OptionComputation(object):
-    def __init__(self, *args, forward, volatility, variance, greeks, **kwargs):
+class OptionCalculating(object):
+    def __init__(self, *args, forward, volatility, variance, screener, greeks, **kwargs):
         super().__init__(*args, **kwargs)
         self.__volatility = volatility
         self.__variance = variance
+        self.__screener = screener
         self.__forward = forward
         self.__greeks = greeks
 
@@ -73,6 +75,7 @@ class OptionComputation(object):
         options = self.forward(options, interest=interest, dividends=dividends)
         options = self.volatility(options, interest=interest, dividends=dividends)
         options = self.variance(options)
+        options = self.screener(options)
         options = self.greeks(options, interest=interest, dividends=dividends)
         return options
 
@@ -81,7 +84,11 @@ class OptionComputation(object):
     @property
     def variance(self): return self.__variance
     @property
+    def screener(self): return self.__screener
+    @property
     def forward(self): return self.__forward
     @property
     def greeks(self): return self.__greeks
+
+
 
