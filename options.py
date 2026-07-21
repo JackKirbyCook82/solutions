@@ -8,29 +8,63 @@ Created on Tues Jul 14 2026
 
 import numpy as np
 import pandas as pd
+from datetime import date as Date
+from datetime import timedelta as Timedelta
 
-from support.custom import NumRange
+from support.custom import ValueRanges
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
-__all__ = ["OptionDownloading", "OptionFiltering", "OptionMarketing", "OptionForecasting"]
+__all__ = ["OptionDownloading", "OptionFiltering", "OptionMarketing", "OptionSurfacer", "OptionForecasting"]
 __copyright__ = "Copyright 2026, Jack Kirby Cook"
 __license__ = "MIT License"
 
 
+class OptionExpireError(Exception): pass
+class OptionStrikeError(Exception): pass
 class OptionDownloading(object):
     def __init__(self, *args, stocks, contracts, options, **kwargs):
         self.__contracts = contracts
         self.__options = options
         self.__stocks = stocks
 
-    def __call__(self, symbol, /, expires, strikes, **kwargs):
+    def __call__(self, symbol, /, **kwargs):
         stock = self.stocks([symbol]).squeeze()
-        strikes = NumRange.create([stock["last"] * strikes.minimum, stock["last"] * strikes.maximum])
+        today = Date.today() + Timedelta(days=1)
+        underlying = stock["last"]
+        expires = self.expires(today, **kwargs)
+        strikes = self.strikes(underlying, **kwargs)
         contracts = self.contracts([stock.ticker], expires=expires, strikes=strikes)
         options = self.options(contracts)
-        options["underlying"] = stock["last"]
+        options["underlying"] = underlying
         return options
+
+    @staticmethod
+    def expires(today, **kwargs):
+        expire, expires = kwargs.get("expire", today), kwargs.get("expires", None)
+        limits = ValueRanges.Date(Date.today() + Timedelta(days=1), Date.today() + Timedelta(days=52*2))
+        if isinstance(expire, Date): expire = ValueRanges.Date(expire, expire)
+        elif isinstance(expire, ValueRanges.Date): pass
+        else: raise OptionExpireError()
+        if isinstance(expires, ValueRanges.Number): expires = ValueRanges.Duration(Timedelta(weeks=expires.minimum), Timedelta(weeks=expires.maximum))
+        elif isinstance(expires, ValueRanges.Duration): pass
+        else: raise OptionExpireError()
+        expires = ValueRanges.Date(expire.minimum + expires.minimum, expire.maximum + expires.maximum)
+        expires = ValueRanges.Date(max(expires.minimum, limits.minimum), min(expires.maximum, limits.maximum))
+        return expires
+
+    @staticmethod
+    def strikes(underlying, **kwargs):
+        strike, strikes = kwargs.get("strike", underlying), kwargs.get("strikes", None)
+        if isinstance(strike, (int, float)): strike = ValueRanges.Number(strike, strike)
+        elif isinstance(strike, ValueRanges.Number): pass
+        else: raise OptionStrikeError()
+        if isinstance(strikes, ValueRanges.Percent): strikes = ValueRanges.Number(underlying * strikes.minimum, underlying * strikes.maximum)
+        elif isinstance(strikes, ValueRanges.Number): pass
+        else: raise OptionStrikeError()
+        strikes = ValueRanges.Number(strike.minimum + strikes.minimum, strike.maximum + strikes.maximum)
+        strikes = ValueRanges.Number(max(strikes.minimum, 0), min(strikes.maximum, np.Inf))
+        return strikes
 
     @property
     def contracts(self): return self.__contracts
@@ -62,20 +96,18 @@ class OptionFiltering(object):
 
 
 class OptionMarketing(object):
-    def __init__(self, *args, volatility, greeks, forward, variance, screener, **kwargs):
+    def __init__(self, *args, volatility, greeks, forward, variance, **kwargs):
         self.__volatility = volatility
         self.__greeks = greeks
         self.__forward = forward
         self.__variance = variance
-        self.__screener = screener
 
     def __call__(self, options, /, interest, dividends, **kwargs):
         assert isinstance(options, pd.DataFrame)
         options = self.forward(options, interest=interest, dividends=dividends)
         options = self.volatility(options, interest=interest, dividends=dividends, signature="median->implied")
-        options = self.variance(options)
-        options = self.screener(options)
         options = self.greeks(options, interest=interest, dividends=dividends, signature="implied->", delimiter=None)
+        options = self.variance(options)
         return options
 
     @property
@@ -86,19 +118,33 @@ class OptionMarketing(object):
     def forward(self): return self.__forward
     @property
     def variance(self): return self.__variance
+
+
+class OptionSurfacer(object):
+    def __init__(self, *args, screener, surface, **kwargs):
+        self.__screener = screener
+        self.__surface = surface
+
+    def __call__(self, options, /, method="regression", smoothing=1/10, weights=None, **kwargs):
+        assert isinstance(options, pd.DataFrame)
+        parameters = dict(method=method, smoothing=smoothing, weights=weights)
+        options = self.screener(options)
+        surface = self.surface(options, **parameters)
+        return surface
+
     @property
     def screener(self): return self.__screener
+    @property
+    def surface(self): return self.__surface
 
 
 class OptionForecasting(object):
-    def __init__(self, *args, surface, standardize, valuation, **kwargs):
+    def __init__(self, *args, standardize, valuation, **kwargs):
         self.__standardize = standardize
         self.__valuation = valuation
-        self.__surface = surface
 
-    def __call__(self, options, /, interest, dividends, **kwargs):
+    def __call__(self, options, surface, /, interest, dividends, **kwargs):
         assert isinstance(options, pd.DataFrame)
-        surface = self.surface(options, method="regression", smoothing=1 / 10, weights=None)
         options = self.standardize(options, surface)
         options["tsv"] = surface(options["tau"], options["mae"])
         options["surfaced"] = np.sqrt(options["tsv"] / options["tau"])
@@ -107,10 +153,9 @@ class OptionForecasting(object):
 
     @property
     def standardize(self): return self.__standardize
+
     @property
     def valuation(self): return self.__valuation
-    @property
-    def surface(self): return self.__surface
 
 
 
