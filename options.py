@@ -11,8 +11,6 @@ import pandas as pd
 from datetime import date as Date
 from datetime import timedelta as Timedelta
 
-from support.custom import ValueRanges
-
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
 __all__ = ["OptionDownloading", "OptionFiltering", "OptionMarketing", "OptionSurfacer", "OptionForecasting"]
@@ -32,8 +30,8 @@ class OptionDownloading(object):
         stock = self.stocks([symbol]).squeeze()
         today = Date.today() + Timedelta(days=1)
         underlying = stock["last"]
-        expires = self.expires(today, **kwargs)
-        strikes = self.strikes(underlying, **kwargs)
+        expires = self.expires(today=today, **kwargs)
+        strikes = self.strikes(underlying=underlying, **kwargs)
         contracts = self.contracts([stock.ticker], expires=expires, strikes=strikes)
         options = self.options(contracts)
         options["underlying"] = underlying
@@ -41,30 +39,38 @@ class OptionDownloading(object):
 
     @staticmethod
     def expires(today, **kwargs):
-        expire, expires = kwargs.get("expire", today), kwargs.get("expires", None)
-        limits = ValueRanges.Date(Date.today() + Timedelta(days=1), Date.today() + Timedelta(days=52*2))
-        if isinstance(expire, Date): expire = ValueRanges.Date(expire, expire)
-        elif isinstance(expire, ValueRanges.Date): pass
-        else: raise OptionExpireError()
-        if isinstance(expires, ValueRanges.Number): expires = ValueRanges.Duration(Timedelta(weeks=expires.minimum), Timedelta(weeks=expires.maximum))
-        elif isinstance(expires, ValueRanges.Duration): pass
-        else: raise OptionExpireError()
-        expires = ValueRanges.Date(expire.minimum + expires.minimum, expire.maximum + expires.maximum)
-        expires = ValueRanges.Date(max(expires.minimum, limits.minimum), min(expires.maximum, limits.maximum))
-        return expires
+        pass
 
     @staticmethod
     def strikes(underlying, **kwargs):
-        strike, strikes = kwargs.get("strike", underlying), kwargs.get("strikes", None)
-        if isinstance(strike, (int, float)): strike = ValueRanges.Number(strike, strike)
-        elif isinstance(strike, ValueRanges.Number): pass
-        else: raise OptionStrikeError()
-        if isinstance(strikes, ValueRanges.Percent): strikes = ValueRanges.Number(underlying * strikes.minimum, underlying * strikes.maximum)
-        elif isinstance(strikes, ValueRanges.Number): pass
-        else: raise OptionStrikeError()
-        strikes = ValueRanges.Number(strike.minimum + strikes.minimum, strike.maximum + strikes.maximum)
-        strikes = ValueRanges.Number(max(strikes.minimum, 0), min(strikes.maximum, np.Inf))
-        return strikes
+        pass
+
+#    @staticmethod
+#    def expires(today, **kwargs):
+#        expire, expires = kwargs.get("expire", today), kwargs.get("expires", None)
+#        limits = ValueRanges.Date(Date.today() + Timedelta(days=1), Date.today() + Timedelta(days=52*2))
+#        if isinstance(expire, Date): expire = ValueRanges.Date(expire, expire)
+#        elif isinstance(expire, ValueRanges.Date): pass
+#        else: raise OptionExpireError()
+#        if isinstance(expires, ValueRanges.Number): expires = ValueRanges.Duration(Timedelta(weeks=expires.minimum), Timedelta(weeks=expires.maximum))
+#        elif isinstance(expires, ValueRanges.Duration): pass
+#        else: raise OptionExpireError()
+#        expires = ValueRanges.Date(expire.minimum + expires.minimum, expire.maximum + expires.maximum)
+#        expires = ValueRanges.Date(max(expires.minimum, limits.minimum), min(expires.maximum, limits.maximum))
+#        return expires
+
+#    @staticmethod
+#    def strikes(underlying, **kwargs):
+#        strike, strikes = kwargs.get("strike", underlying), kwargs.get("strikes", None)
+#        if isinstance(strike, (int, float)): strike = ValueRanges.Number(strike, strike)
+#        elif isinstance(strike, ValueRanges.Number): pass
+#        else: raise OptionStrikeError()
+#        if isinstance(strikes, ValueRanges.Percent): strikes = ValueRanges.Number(underlying * strikes.minimum, underlying * strikes.maximum)
+#        elif isinstance(strikes, ValueRanges.Number): pass
+#        else: raise OptionStrikeError()
+#        strikes = ValueRanges.Number(strike.minimum + strikes.minimum, strike.maximum + strikes.maximum)
+#        strikes = ValueRanges.Number(max(strikes.minimum, 0), min(strikes.maximum, np.Inf))
+#        return strikes
 
     @property
     def contracts(self): return self.__contracts
