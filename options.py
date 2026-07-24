@@ -37,7 +37,7 @@ class OptionDownloading(object):
         assert isinstance(expires, DateRange) and isinstance(strikes, NumberRange)
         expires = DateRange(max(expires.minimum, tomorrow), expires.maximum)
         strikes = NumberRange(max(strikes.minimum, 0), strikes.maximum)
-        contracts = self.contracts([stock.ticker], expires=expires, strikes=strikes)
+        contracts = self.contracts([symbol], expires=expires, strikes=strikes)
         options = self.options(contracts)
         options["underlying"] = underlying
         return options
