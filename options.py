@@ -8,6 +8,7 @@ Created on Tues Jul 14 2026
 
 import numpy as np
 import pandas as pd
+from types import SimpleNamespace
 from datetime import date as Date
 from datetime import timedelta as Timedelta
 
@@ -80,11 +81,35 @@ class OptionMarketing(object):
 
     def __call__(self, options, /, interest, dividends, **kwargs):
         assert isinstance(options, pd.DataFrame)
+        assert len(options["ticker"].unique()) == 1
         options = self.forward(options, interest=interest, dividends=dividends)
         options = self.volatility(options, interest=interest, dividends=dividends, signature="median->implied")
         options = self.greeks(options, interest=interest, dividends=dividends, signature="implied->", delimiter=None)
         options = self.variance(options)
+        volatility = list(self.interpolate(options, signature="implied->volatility"))
+        options["volatility"] = float(np.median(volatility))
         return options
+
+    @staticmethod
+    def interpolate(dataframes, signature):
+        assert isinstance(dataframes, pd.DataFrame)
+        inlet, outlet = str(signature).split("->")
+        dataframes = dataframes[["expire", "strike", "underlying", inlet]].rename(columns={inlet: outlet})
+        for expire, dataframe in dataframes.groupby("expire"):
+            underlying = float(dataframe["underlying"].median())
+            dataframe = dataframe.groupby("strike", as_index=False)[outlet].median().sort_values("strike")
+            lower = dataframe[dataframe["strike"] <= underlying].tail(1)
+            upper = dataframe[dataframe["strike"] >= underlying].head(1)
+            if lower.empty and upper.empty: continue
+            if lower.empty: yield float(upper[outlet].iloc[0])
+            elif upper.empty: yield float(lower[outlet].iloc[0])
+            else:
+                strikes = SimpleNamespace(lower=float(lower["strike"].iloc[0]), upper=float(upper["strike"].iloc[0]))
+                outlets = SimpleNamespace(lower=float(lower[outlet].iloc[0]), upper=float(upper[outlet].iloc[0]))
+                if strikes.lower == strikes.upper: yield outlets.lower
+                else:
+                    weight = ((underlying - strikes.lower) / (strikes.upper - strikes.lower))
+                    yield outlets.lower + weight * (outlets.upper - outlets.lower)
 
     @property
     def volatility(self): return self.__volatility
