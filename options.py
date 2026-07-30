@@ -83,7 +83,7 @@ class OptionMarketing(object):
         assert isinstance(options, pd.DataFrame)
         assert len(options["ticker"].unique()) == 1
         options = self.forward(options, interest=interest, dividends=dividends)
-        options = self.volatility(options, interest=interest, dividends=dividends, signature="median->implied")
+        options = self.volatility(options, interest=interest, dividends=dividends, signature="market->implied")
         options = self.greeks(options, interest=interest, dividends=dividends, signature="implied->", delimiter=None)
         options = self.variance(options)
         volatility = list(self.interpolate(options, signature="implied->volatility"))
