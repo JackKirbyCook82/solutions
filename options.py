@@ -16,7 +16,7 @@ from support.custom import DateRange, NumberRange
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
-__all__ = ["OptionDownloading", "OptionFiltering", "OptionMarketing", "OptionSurfacer", "OptionForecasting"]
+__all__ = ["OptionDownloading", "OptionFiltering", "OptionPricing", "OptionValuing"]
 __copyright__ = "Copyright 2026, Jack Kirby Cook"
 __license__ = "MIT License"
 
@@ -72,7 +72,7 @@ class OptionFiltering(object):
     def sanity(self): return self.__sanity
 
 
-class OptionMarketing(object):
+class OptionPricing(object):
     def __init__(self, *args, volatility, greeks, forward, variance, **kwargs):
         self.__volatility = volatility
         self.__greeks = greeks
@@ -121,31 +121,17 @@ class OptionMarketing(object):
     def variance(self): return self.__variance
 
 
-class OptionSurfacer(object):
-    def __init__(self, *args, screener, surface, **kwargs):
-        self.__screener = screener
-        self.__surface = surface
-
-    def __call__(self, options, /, method="regression", smoothing=1/10, weights=None, **kwargs):
-        assert isinstance(options, pd.DataFrame)
-        parameters = dict(method=method, smoothing=smoothing, weights=weights)
-        options = self.screener(options)
-        surface = self.surface(options, **parameters)
-        return surface
-
-    @property
-    def screener(self): return self.__screener
-    @property
-    def surface(self): return self.__surface
-
-
-class OptionForecasting(object):
-    def __init__(self, *args, standardize, valuation, **kwargs):
+class OptionValuing(object):
+    def __init__(self, *args, screen, surface, standardize, valuation, **kwargs):
         self.__standardize = standardize
         self.__valuation = valuation
+        self.__surface = surface
+        self.__screen = screen
 
-    def __call__(self, options, surface, /, interest, dividends, **kwargs):
+    def __call__(self, options, /, interest, dividends, method="regression", smoothing=1/10, weights=None, **kwargs):
         assert isinstance(options, pd.DataFrame)
+        options = self.screen(options)
+        surface = self.surface(options, method=method, smoothing=smoothing, weights=weights)
         options = self.standardize(options, surface)
         options["tsv"] = surface(options["tau"], options["mae"])
         options["surfaced"] = np.sqrt(options["tsv"] / options["tau"])
@@ -154,10 +140,12 @@ class OptionForecasting(object):
 
     @property
     def standardize(self): return self.__standardize
-
     @property
     def valuation(self): return self.__valuation
-
+    @property
+    def surface(self): return self.__surface
+    @property
+    def screen(self): return self.__screen
 
 
 
