@@ -3,6 +3,7 @@
 Created on Tues Jul 14 2026
 @name:   Trading Option Solutions
 @author: Jack Kirby Cook
+@file:   solutions/options.py
 
 """
 
