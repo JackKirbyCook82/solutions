@@ -14,6 +14,7 @@ from datetime import date as Date
 from datetime import timedelta as Timedelta
 
 from support.custom import DateRange, NumberRange
+from support.surface import SurfaceError
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
@@ -132,7 +133,8 @@ class OptionValuing(object):
     def __call__(self, options, /, interest, dividends, method="regression", smoothing=1/10, weights=None, **kwargs):
         assert isinstance(options, pd.DataFrame)
         options = self.screen(options)
-        surface = self.surface(options, method=method, smoothing=smoothing, weights=weights)
+        try: surface = self.surface(options, method=method, smoothing=smoothing, weights=weights)
+        except SurfaceError: return pd.DataFrame(columns=options.columns)
         options = self.standardize(options, surface)
         options["tsv"] = surface(options["tau"], options["mae"])
         options["surfaced"] = np.sqrt(options["tsv"] / options["tau"])
