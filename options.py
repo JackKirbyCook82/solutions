@@ -34,7 +34,7 @@ class OptionDownloading(object):
     def __call__(self, symbol, /, expires, strikes, **kwargs):
         stock = self.stocks([symbol]).squeeze()
         tomorrow = Date.today() + Timedelta(days=1)
-        underlying = stock["last"]
+        underlying = (stock["bid"] * stock["demand"] + stock["ask"] * stock["supply"]) / (stock["demand"] + stock["supply"])
         if callable(expires): expires = expires(tomorrow=tomorrow, **kwargs)
         if callable(strikes): strikes = strikes(underlying=underlying, **kwargs)
         assert isinstance(expires, DateRange) and isinstance(strikes, NumberRange)
